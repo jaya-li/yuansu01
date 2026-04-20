@@ -2416,39 +2416,57 @@
         if (!phone || !step1) return;
         if (phone.classList.contains("phone--entry")) return;
         if (phone.classList.contains("phone--feed-open")) return;
-        if (phone.classList.contains("phone--step-2") || phone.classList.contains("phone--step-3")) return;
 
         var contentEl = phone.querySelector(".content");
         var customEl = phone.querySelector(".custom-block");
-        var tagsEl = step1.querySelector(".tags");
-        if (!contentEl || !customEl || !tagsEl) return;
+        if (!contentEl || !customEl) return;
+
+        var inStep2 = phone.classList.contains("phone--step-2");
+        var inStep3 = phone.classList.contains("phone--step-3");
+        var activePanel = inStep3 ? step3 : inStep2 ? step2 : step1;
+        var tagsEl = inStep3
+          ? document.getElementById("tagsStep3")
+          : inStep2
+            ? document.getElementById("tagsFollowup")
+            : step1.querySelector(".tags");
+        if (!activePanel || !tagsEl) return;
 
         var chips = Array.prototype.slice.call(tagsEl.querySelectorAll(".tag.tag-chip"));
+        if (!chips.length) return;
 
-        /* 为了在同样空间下展示更多项：短标签优先排在前面 */
-        chips
-          .slice()
-          .sort(function (a, b) {
-            var ta = ((a.querySelector(".tag-text") && a.querySelector(".tag-text").textContent) || "").trim();
-            var tb = ((b.querySelector(".tag-text") && b.querySelector(".tag-text").textContent) || "").trim();
-            if (ta.length !== tb.length) return ta.length - tb.length;
-            return ta.localeCompare(tb);
-          })
-          .forEach(function (chip) {
-            tagsEl.appendChild(chip);
-          });
+        if (!inStep2 && !inStep3) {
+          /* 为了在同样空间下展示更多项：短标签优先排在前面 */
+          chips
+            .slice()
+            .sort(function (a, b) {
+              var ta = ((a.querySelector(".tag-text") && a.querySelector(".tag-text").textContent) || "").trim();
+              var tb = ((b.querySelector(".tag-text") && b.querySelector(".tag-text").textContent) || "").trim();
+              if (ta.length !== tb.length) return ta.length - tb.length;
+              return ta.localeCompare(tb);
+            })
+            .forEach(function (chip) {
+              tagsEl.appendChild(chip);
+            });
+        }
 
         chips = Array.prototype.slice.call(tagsEl.querySelectorAll(".tag.tag-chip"));
         chips.forEach(function (chip) {
           chip.classList.remove("tag-chip--fit-hidden");
         });
 
-        var gapPx = parseFloat((window.getComputedStyle(contentEl).gap || "0").toString()) || 0;
-        var available = Math.max(0, contentEl.clientHeight - customEl.offsetHeight - gapPx);
-        if (!available) return;
-
         var guard = chips.length + 2;
-        while (step1.scrollHeight > available && guard-- > 0) {
+        while (guard-- > 0) {
+          var overflow = false;
+          if (inStep2 || inStep3) {
+            overflow = activePanel.scrollHeight > activePanel.clientHeight;
+          } else {
+            var gapPx = parseFloat((window.getComputedStyle(contentEl).gap || "0").toString()) || 0;
+            var available = Math.max(0, contentEl.clientHeight - customEl.offsetHeight - gapPx);
+            if (!available) return;
+            overflow = activePanel.scrollHeight > available;
+          }
+          if (!overflow) break;
+
           var hideTarget = null;
           for (var i = chips.length - 1; i >= 0; i--) {
             var chip = chips[i];
