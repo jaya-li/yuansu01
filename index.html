@@ -174,20 +174,22 @@
     .entry-main {
       flex: 1 1 auto;
       min-height: 0;
-      display: flex;
-      flex-direction: column;
-      justify-content: space-between;
-      align-items: center;
-      padding: 20px 32px;
+      display: grid;
+      grid-template-rows: 1fr auto;
+      align-items: stretch;
+      justify-items: center;
+      padding: 0 0 44px;
     }
 
     .entry-brand {
-      width: 240px;
+      width: calc(100% - 64px);
+      max-width: 326px;
       display: flex;
       flex-direction: column;
       align-items: center;
       gap: 20px;
-      margin-top: 112px;
+      margin-top: 0;
+      align-self: center;
     }
 
     .entry-logo {
@@ -216,6 +218,7 @@
 
     .entry-title {
       margin: 0;
+      width: 100%;
       text-align: center;
       font-family: "TikTok Sans", system-ui, sans-serif;
       font-size: 32px;
@@ -225,17 +228,19 @@
     }
 
     .entry-actions {
-      width: 100%;
+      width: calc(100% - 64px);
+      max-width: 326px;
       display: flex;
       flex-direction: column;
       align-items: center;
       gap: 24px;
-      padding-bottom: 20px;
+      padding-bottom: 0;
+      align-self: end;
     }
 
     .entry-btn-phone {
       width: 100%;
-      max-width: 326px;
+      max-width: none;
       min-height: 52px;
       border: 0;
       border-radius: 999px;
@@ -270,7 +275,7 @@
     }
 
     .entry-or-row {
-      width: min(342px, 100%);
+      width: 100%;
       display: flex;
       align-items: center;
       justify-content: center;
@@ -342,7 +347,8 @@
 
     .entry-terms {
       margin: 0;
-      max-width: 326px;
+      width: 100%;
+      max-width: none;
       text-align: center;
       font-family: "TikTok Sans", system-ui, sans-serif;
       font-size: 11px;
@@ -437,6 +443,7 @@
       z-index: 4;
       pointer-events: auto;
       touch-action: manipulation;
+      overflow: hidden;
     }
 
     /* Step2 / Step3：底部按钮区固定；中间列表可滚动 */
@@ -1160,6 +1167,10 @@
       width: 100%;
       height: 100%;
       position: relative;
+    }
+
+    .tag.tag-chip.tag-chip--fit-hidden {
+      display: none !important;
     }
 
     .top-overlay-rot-inner img {
@@ -2361,6 +2372,7 @@
       var step3VoiceFeedbackDone = false;
       /** 第一页语音识别结束后暂存，进入第二页气泡动画完毕再插入对话 */
       var pendingStep1Voice = "";
+      var step1FitTimer = null;
 
       function openFeedFromComplete() {
         if (phone && phone.classList.contains("phone--feed-open")) return;
@@ -2395,6 +2407,63 @@
       function enterFromEntryScreen() {
         if (!phone) return;
         phone.classList.remove("phone--entry");
+        scheduleFitStep1Tags();
+      }
+
+      function fitStep1TagsToViewport() {
+        if (!phone || !step1) return;
+        if (phone.classList.contains("phone--entry")) return;
+        if (phone.classList.contains("phone--feed-open")) return;
+        if (phone.classList.contains("phone--step-2") || phone.classList.contains("phone--step-3")) return;
+
+        var contentEl = phone.querySelector(".content");
+        var customEl = phone.querySelector(".custom-block");
+        var tagsEl = step1.querySelector(".tags");
+        if (!contentEl || !customEl || !tagsEl) return;
+
+        var chips = Array.prototype.slice.call(tagsEl.querySelectorAll(".tag.tag-chip"));
+
+        /* 为了在同样空间下展示更多项：短标签优先排在前面 */
+        chips
+          .slice()
+          .sort(function (a, b) {
+            var ta = ((a.querySelector(".tag-text") && a.querySelector(".tag-text").textContent) || "").trim();
+            var tb = ((b.querySelector(".tag-text") && b.querySelector(".tag-text").textContent) || "").trim();
+            if (ta.length !== tb.length) return ta.length - tb.length;
+            return ta.localeCompare(tb);
+          })
+          .forEach(function (chip) {
+            tagsEl.appendChild(chip);
+          });
+
+        chips = Array.prototype.slice.call(tagsEl.querySelectorAll(".tag.tag-chip"));
+        chips.forEach(function (chip) {
+          chip.classList.remove("tag-chip--fit-hidden");
+        });
+
+        var gapPx = parseFloat((window.getComputedStyle(contentEl).gap || "0").toString()) || 0;
+        var available = Math.max(0, contentEl.clientHeight - customEl.offsetHeight - gapPx);
+        if (!available) return;
+
+        var guard = chips.length + 2;
+        while (step1.scrollHeight > available && guard-- > 0) {
+          var hideTarget = null;
+          for (var i = chips.length - 1; i >= 0; i--) {
+            var chip = chips[i];
+            if (chip.classList.contains("tag-chip--fit-hidden")) continue;
+            var cb = chip.querySelector(".tag-cb");
+            if (cb && cb.checked) continue;
+            hideTarget = chip;
+            break;
+          }
+          if (!hideTarget) break;
+          hideTarget.classList.add("tag-chip--fit-hidden");
+        }
+      }
+
+      function scheduleFitStep1Tags() {
+        if (step1FitTimer) clearTimeout(step1FitTimer);
+        step1FitTimer = setTimeout(fitStep1TagsToViewport, 30);
       }
 
       function syncHasSel() {
@@ -2424,6 +2493,7 @@
           btnContinue.disabled = false;
           btnContinue.classList.remove("btn-continue--ready");
         }
+        scheduleFitStep1Tags();
       }
 
       function applyStep1Assets() {
@@ -3152,6 +3222,12 @@
       }
       if (params.get("feed") === "1") {
         openFeedFromComplete();
+      }
+      scheduleFitStep1Tags();
+      window.addEventListener("resize", scheduleFitStep1Tags);
+      window.addEventListener("orientationchange", scheduleFitStep1Tags);
+      if (window.visualViewport && window.visualViewport.addEventListener) {
+        window.visualViewport.addEventListener("resize", scheduleFitStep1Tags);
       }
     })();
   </script>
