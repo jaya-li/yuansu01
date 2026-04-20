@@ -3150,7 +3150,8 @@
 
       if (phone) {
         var touchStartY = null;
-        var SWIPE_UP_TRIGGER = 56;
+        /* 防止误触：手指在 Y 轴至少上滑 48px 才会触发进入视频流 */
+        var SWIPE_UP_TRIGGER = 48;
         var SWIPE_MAX_X_DRIFT = 42;
         var touchStartX = null;
 
