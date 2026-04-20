@@ -362,10 +362,12 @@
     }
 
     .entry-home-indicator {
+      position: absolute;
+      left: 0;
+      bottom: 0;
       width: 100%;
       height: 34px;
-      position: relative;
-      flex-shrink: 0;
+      pointer-events: none;
     }
 
     .entry-home-indicator::after {
@@ -1343,9 +1345,19 @@
       align-items: center;
       justify-content: center;
       gap: 2px;
-      background: linear-gradient(to bottom, #000 0%, rgba(0, 0, 0, 0) 100%);
+      background: none !important;
+      box-shadow: none !important;
       z-index: 2;
       pointer-events: none;
+      overflow: hidden;
+    }
+
+    .swipe-bar::before {
+      content: "";
+      position: absolute;
+      inset: 0;
+      background: #252a63;
+      z-index: -1;
     }
 
     .swipe-text {
@@ -2355,8 +2367,6 @@
       </div>
     </div>
   </div>
-
-  <p class="demo-hint" aria-hidden="true">Le domande del secondo step e i tag sono collegati alle scelte del primo step. Ogni microfono si chiude automaticamente dopo una pausa; il contenuto del primo step appare nella chat del secondo. Il riconoscimento vocale richiede HTTPS o localhost.</p>
 
   <script>
     (function () {
