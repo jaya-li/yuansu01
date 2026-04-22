@@ -1,30 +1,30 @@
-# 意大利调研 方案一
+# Progetto onboarding (italiano)
 
-## 当前文件
+## File nel progetto
 
-- `figma-onboarding-interactive-demo.html`：主工程文件（含所有交互逻辑、样式、组件）
-- `download_assets.py`：将 HTML 中远程素材下载到本地并自动改为本地引用
+- `index.html`: file principale dell'app demo (struttura, stili e logica interattiva).
+- `download_assets.py`: scarica le risorse remote usate nell'HTML e aggiorna i riferimenti a percorsi locali.
 
-## 本地打开
+## Apertura in locale
 
-直接双击或浏览器打开：
+Apri direttamente nel browser:
 
-- `file:///Users/bytedance/Desktop/意大利调研%20方案一/figma-onboarding-interactive-demo.html`
+- `file:///Users/bytedance/Desktop/yuansu01/index.html`
 
-## 上传 GitHub 并异地完整打开（推荐流程）
+## Pubblicazione su GitHub e apertura su altri dispositivi
 
-1. 进入该目录：
-   - `cd "/Users/bytedance/Desktop/意大利调研 方案一"`
-2. 先执行素材本地化：
+1. Entra nella cartella del progetto:
+   - `cd "/Users/bytedance/Desktop/yuansu01"`
+2. Localizza prima le risorse:
    - `python3 download_assets.py`
-3. 脚本会：
-   - 创建 `assets/` 目录
-   - 下载 HTML 内的 Figma 图片与视频资源
-   - 自动把 HTML 中远程 URL 替换为 `./assets/...` 本地路径
-4. 将整个 `意大利调研 方案一` 文件夹上传到 GitHub。
-5. 在异地拉取后，打开同一个 HTML 即可完整显示。
+3. Lo script:
+   - crea la cartella `assets/`
+   - scarica immagini/video Figma usati dalla pagina
+   - sostituisce automaticamente gli URL remoti con percorsi locali `./assets/...`
+4. Carica l'intera cartella `yuansu01` su GitHub.
+5. Sul dispositivo remoto, dopo il clone, apri `index.html`.
 
-## 注意
+## Note
 
-- 如果不执行 `download_assets.py`，页面仍依赖外链素材（例如 Figma MCP 资源），可能在异地出现资源失效。
-- 建议把 `assets/` 一并提交到仓库，确保长期可用。
+- Se non esegui `download_assets.py`, la pagina dipende ancora da risorse esterne (ad esempio Figma MCP) che potrebbero non essere disponibili altrove.
+- Si consiglia di versionare anche la cartella `assets/` per garantire stabilita nel tempo.
