@@ -2543,13 +2543,7 @@
         var t = pendingStep1Voice;
         if (!t) return;
         pendingStep1Voice = "";
-        var stack = document.getElementById("chatStackStep2");
-        if (!stack) return;
-        var p = document.createElement("p");
-        p.className = "chat-bubble chat-bubble--user chat-bubble--user-step1voice chat-bubble-in";
-        p.textContent = t;
-        stack.appendChild(p);
-        if (step2) step2.scrollTop = step2.scrollHeight;
+        /* 语音模式不展示用户转写气泡 */
       }
 
       /**
@@ -3034,23 +3028,7 @@
       }
 
       function appendUserUtterance(text) {
-        var t = (text || "").trim();
-        if (!t) return;
-        if (phone && phone.classList.contains("phone--feed-open")) return;
-        if (!phone.classList.contains("phone--step-2") && !phone.classList.contains("phone--step-3")) return;
-        var stack = phone.classList.contains("phone--step-3")
-          ? document.getElementById("chatStackStep3")
-          : document.getElementById("chatStackStep2");
-        if (!stack) return;
-        var p = document.createElement("p");
-        p.className = "chat-bubble chat-bubble--user chat-bubble-in";
-        p.textContent = t;
-        stack.appendChild(p);
-        var scrollHost =
-          phone.classList.contains("phone--step-3") && step3
-            ? step3
-            : step2;
-        if (scrollHost) scrollHost.scrollTop = scrollHost.scrollHeight;
+        /* 语音模式不展示用户转写气泡 */
       }
 
       /** 一轮识别结束后的分发：第一页写入 pending，第二/三页直接插入气泡 */
