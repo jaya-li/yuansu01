@@ -2890,7 +2890,13 @@
 
       phone.addEventListener("change", function (e) {
         var t = e.target;
-        if (t && t.classList && t.classList.contains("tag-cb")) syncHasSel();
+        if (t && t.classList && t.classList.contains("tag-cb")) {
+          var stepNo = parseInt(t.getAttribute("data-step") || "0", 10);
+          if (stepNo === 1 || stepNo === 2 || stepNo === 3) {
+            if (!roundInputMode[stepNo]) roundInputMode[stepNo] = "option";
+          }
+          syncHasSel();
+        }
       });
       syncHasSel();
 
@@ -2932,6 +2938,41 @@
       var voiceSilenceTimer = null;
       var voiceHardStopTimer = null;
       var fakeVoiceTimer = null;
+      var roundInputMode = { 1: null, 2: null, 3: null }; // "voice" | "option" | null
+
+      function currentRound() {
+        if (phone.classList.contains("phone--step-3")) return 3;
+        if (phone.classList.contains("phone--step-2")) return 2;
+        return 1;
+      }
+
+      function hideRoundOptions(round) {
+        if (round === 1 && step1) {
+          var tags1 = step1.querySelector(".tags");
+          if (tags1) {
+            tags1.setAttribute("aria-hidden", "true");
+            tags1.style.display = "none";
+          }
+          return;
+        }
+        if (round === 2) {
+          var tags2 = document.getElementById("tagsFollowup");
+          if (tags2) {
+            tags2.hidden = true;
+            tags2.setAttribute("aria-hidden", "true");
+            tags2.style.display = "none";
+          }
+          return;
+        }
+        if (round === 3) {
+          var tags3 = document.getElementById("tagsStep3");
+          if (tags3) {
+            tags3.hidden = true;
+            tags3.setAttribute("aria-hidden", "true");
+            tags3.style.display = "none";
+          }
+        }
+      }
 
       function appendUserUtterance(text) {
         var t = (text || "").trim();
@@ -2962,9 +3003,8 @@
           appendUserUtterance(t);
           return;
         }
-        /* 第一轮若走语音输入：直接进入第三轮问题 */
-        pendingStep1Voice = "";
-        goStep3();
+        /* 第一轮语音：写入待展示，进入第二轮后插入对话 */
+        pendingStep1Voice = t;
       }
 
       function closeVoiceSheet() {
@@ -3114,12 +3154,31 @@
       }
 
       function submitVoiceResult(text) {
+        var round = currentRound();
+        roundInputMode[round] = "voice";
+        hideRoundOptions(round);
         var t = (text || "").trim();
         if (t) {
           deliverVoiceTranscript(t);
+        }
+
+        if (round === 1) {
+          goStep2();
           return;
         }
-        handleFakeVoiceResult();
+        if (round === 2) {
+          goStep3();
+          return;
+        }
+        if (round === 3) {
+          appendAssistantUtterance("Perfetto, ho capito. Iniziamo a guardare i video.", "chatStackStep3");
+          step3VoiceFeedbackDone = true;
+          phone.classList.add("phone--step3-finished");
+          var btn3 = document.getElementById("btnContinue");
+          if (btn3) btn3.textContent = "Guarda ora";
+          syncHasSel();
+          if (step3) step3.scrollTop = step3.scrollHeight;
+        }
       }
 
       function armVoiceSilenceTimeout(ms) {
@@ -3250,7 +3309,7 @@
             fakeVoiceTimer = setTimeout(function () {
               if (!voiceListening) return;
               stopVoiceInput(false);
-              handleFakeVoiceResult();
+              submitVoiceResult("");
             }, 1400);
           });
       }
@@ -3258,9 +3317,15 @@
       if (micBtn) {
         micBtn.addEventListener("click", function () {
           if (phone.classList.contains("phone--feed-open")) return;
+          var round = currentRound();
+          if (roundInputMode[round] === "option") {
+            showVoiceDiag("Questa fase usa gia le opzioni selezionate. Prosegui con Continua.");
+            return;
+          }
           if (voiceListening) {
+            var partial = (voiceAccumulated || voiceLastInterim || "").trim();
             stopVoiceInput(false);
-            handleFakeVoiceResult();
+            submitVoiceResult(partial);
             return;
           }
           openVoiceSheet();
