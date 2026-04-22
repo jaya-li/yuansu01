@@ -3033,10 +3033,6 @@
       }
 
       function runVoicePreflight() {
-        if (!speechEngineAvailable()) {
-          showVoiceDiag("Questo browser non supporta SpeechRecognition. Usa Chrome e apri da http://localhost.");
-          return Promise.reject(new Error("speech-engine-unavailable"));
-        }
         if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
           showVoiceDiag("Questo ambiente non supporta il microfono (getUserMedia).");
           return Promise.reject(new Error("getusermedia-unavailable"));
@@ -3117,18 +3113,146 @@
         }
       }
 
+      function submitVoiceResult(text) {
+        var t = (text || "").trim();
+        if (t) {
+          deliverVoiceTranscript(t);
+          return;
+        }
+        handleFakeVoiceResult();
+      }
+
+      function armVoiceSilenceTimeout(ms) {
+        if (voiceSilenceTimer) clearTimeout(voiceSilenceTimer);
+        voiceSilenceTimer = setTimeout(function () {
+          if (!voiceListening) return;
+          var text = (voiceAccumulated || voiceLastInterim || "").trim();
+          stopVoiceInput(false);
+          submitVoiceResult(text);
+        }, ms);
+      }
+
       function startVoiceInput() {
-        /* 假语音模式：不依赖浏览器语音能力，稳定演示 */
         voiceListening = true;
         voiceUserAbort = false;
         voiceSessionActive = true;
+        voiceRestartCount = 0;
+        voiceGotSpeech = false;
+        voiceAccumulated = "";
+        voiceLastInterim = "";
         clearVoiceTimers();
-        showVoiceDiag("In ascolto...");
-        fakeVoiceTimer = setTimeout(function () {
-          if (!voiceListening) return;
-          stopVoiceInput(false);
-          handleFakeVoiceResult();
-        }, 1400);
+        showVoiceDiag("In ascolto... parla pure");
+
+        runVoicePreflight()
+          .then(function () {
+            return ensureMicConnected();
+          })
+          .then(function () {
+            var SR = window.SpeechRecognition || window.webkitSpeechRecognition;
+            if (!SR) throw new Error("speech-engine-unavailable");
+
+            var rec = new SR();
+            voiceRec = rec;
+            rec.lang = (navigator.language || "it-IT");
+            rec.continuous = true;
+            rec.interimResults = true;
+            rec.maxAlternatives = 1;
+
+            var finished = false;
+            function finishOnce(withText) {
+              if (finished) return;
+              finished = true;
+              stopVoiceInput(false);
+              submitVoiceResult(withText);
+            }
+
+            rec.onstart = function () {
+              showVoiceDiag("Microfono attivo, termina automaticamente quando fai una pausa");
+            };
+
+            rec.onspeechstart = function () {
+              voiceGotSpeech = true;
+            };
+
+            rec.onresult = function (event) {
+              var finalChunk = "";
+              var interimChunk = "";
+              for (var i = event.resultIndex; i < event.results.length; i++) {
+                var r = event.results[i];
+                var text = (r[0] && r[0].transcript) ? r[0].transcript : "";
+                if (r.isFinal) {
+                  finalChunk += text + " ";
+                } else {
+                  interimChunk += text + " ";
+                }
+              }
+
+              if (finalChunk.trim()) {
+                voiceAccumulated = (voiceAccumulated + " " + finalChunk).trim();
+              }
+              voiceLastInterim = interimChunk.trim();
+              armVoiceSilenceTimeout(1200);
+            };
+
+            rec.onspeechend = function () {
+              armVoiceSilenceTimeout(900);
+            };
+
+            rec.onerror = function (event) {
+              if (!voiceListening) return;
+              if (event && (event.error === "aborted" || event.error === "no-speech")) {
+                armVoiceSilenceTimeout(500);
+                return;
+              }
+              showVoiceDiag("Riconoscimento vocale non disponibile, uso modalità demo");
+              finishOnce("");
+            };
+
+            rec.onend = function () {
+              if (!voiceListening || voiceUserAbort) return;
+              var text = (voiceAccumulated || voiceLastInterim || "").trim();
+              if (text) {
+                finishOnce(text);
+                return;
+              }
+              if (voiceRestartCount < 1) {
+                voiceRestartCount += 1;
+                try {
+                  rec.start();
+                  return;
+                } catch (e) {}
+              }
+              finishOnce("");
+            };
+
+            voiceHardStopTimer = setTimeout(function () {
+              if (!voiceListening) return;
+              var text = (voiceAccumulated || voiceLastInterim || "").trim();
+              finishOnce(text);
+            }, 15000);
+
+            rec.start();
+          })
+          .catch(function (err) {
+            var errName = err && err.name ? err.name : "";
+            if (errName === "NotAllowedError" || errName === "PermissionDeniedError") {
+              stopVoiceInput(true);
+              showVoiceDiag("Permesso microfono negato. Apri le impostazioni del sito e abilita Microfono.");
+              return;
+            }
+            if (errName === "NotFoundError" || errName === "DevicesNotFoundError") {
+              stopVoiceInput(true);
+              showVoiceDiag("Nessun microfono rilevato su questo dispositivo.");
+              return;
+            }
+            /* 兜底：浏览器不支持时保留演示行为 */
+            showVoiceDiag("Modalità demo: chiusura automatica simulata");
+            fakeVoiceTimer = setTimeout(function () {
+              if (!voiceListening) return;
+              stopVoiceInput(false);
+              handleFakeVoiceResult();
+            }, 1400);
+          });
       }
 
       if (micBtn) {
