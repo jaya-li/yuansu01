@@ -2182,7 +2182,7 @@
           <div class="voice-bars" aria-hidden="true">
             <span></span><span></span><span></span><span></span><span></span>
           </div>
-          <p class="voice-sheet-sub" id="voiceSheetSub">语音输入中</p>
+          <p class="voice-sheet-sub" id="voiceSheetSub">Inserimento vocale in corso</p>
         </div>
       </div>
     </div>
@@ -3144,7 +3144,7 @@
         if (phone) phone.classList.add("phone--voice");
         if (micBtn) micBtn.classList.add("mic-btn--listening");
         var sub = document.getElementById("voiceSheetSub");
-        if (sub) sub.textContent = "语音输入中";
+        if (sub) sub.textContent = "Inserimento vocale in corso";
       }
 
       function submitVoiceResult(text) {
@@ -3194,7 +3194,7 @@
         voiceAccumulated = "";
         voiceLastInterim = "";
         clearVoiceTimers();
-        showVoiceDiag("语音输入中");
+        showVoiceDiag("Inserimento vocale in corso");
 
         runVoicePreflight()
           .then(function () {
@@ -3220,7 +3220,7 @@
             }
 
             rec.onstart = function () {
-              showVoiceDiag("语音输入中");
+              showVoiceDiag("Inserimento vocale in corso");
             };
 
             rec.onspeechstart = function () {
@@ -3244,11 +3244,11 @@
                 voiceAccumulated = (voiceAccumulated + " " + finalChunk).trim();
               }
               voiceLastInterim = interimChunk.trim();
-              armVoiceSilenceTimeout(1200);
+              armVoiceSilenceTimeout(1000);
             };
 
             rec.onspeechend = function () {
-              armVoiceSilenceTimeout(900);
+              armVoiceSilenceTimeout(1000);
             };
 
             rec.onerror = function (event) {
