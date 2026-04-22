@@ -2897,7 +2897,6 @@
               t.checked = false;
               return;
             }
-            if (!roundInputMode[stepNo]) roundInputMode[stepNo] = "option";
           }
           syncHasSel();
         }
@@ -2909,6 +2908,7 @@
       if (btnContinue) {
         btnContinue.addEventListener("click", function () {
           if (phone.classList.contains("phone--step-3")) {
+            roundInputMode[3] = "option";
             var sel3 = [];
             if (step3) {
               step3.querySelectorAll(".tag-cb:checked").forEach(function (c) {
@@ -2921,11 +2921,13 @@
             return;
           }
           if (phone.classList.contains("phone--step-2")) {
+            roundInputMode[2] = "option";
             goStep3();
             return;
           }
           var any = step1 && step1.querySelector(".tag-cb:checked");
           if (!any) return;
+          roundInputMode[1] = "option";
           goStep2();
         });
       }
@@ -3282,11 +3284,11 @@
                 voiceAccumulated = (voiceAccumulated + " " + finalChunk).trim();
               }
               voiceLastInterim = interimChunk.trim();
-              armVoiceSilenceTimeout(1000);
+              armVoiceSilenceTimeout(1500);
             };
 
             rec.onspeechend = function () {
-              armVoiceSilenceTimeout(1000);
+              armVoiceSilenceTimeout(1500);
             };
 
             rec.onerror = function (event) {
@@ -3350,9 +3352,6 @@
         micBtn.addEventListener("click", function () {
           if (phone.classList.contains("phone--feed-open")) return;
           var round = currentRound();
-          if (anyCheckedInRound(round)) {
-            roundInputMode[round] = "option";
-          }
           if (roundInputMode[round] === "option") {
             showVoiceDiag("Questa fase usa gia le opzioni selezionate. Prosegui con Continua.");
             return;
