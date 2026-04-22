@@ -2944,6 +2944,12 @@
       var voiceSilenceTimer = null;
       var voiceHardStopTimer = null;
       var fakeVoiceTimer = null;
+      var voiceAudioCtx = null;
+      var voiceAnalyser = null;
+      var voiceSourceNode = null;
+      var voiceVadInterval = null;
+      var voiceLastLoudAt = 0;
+      var VOICE_SILENCE_CLOSE_MS = 1500;
       var roundInputMode = { 1: null, 2: null, 3: null }; // "voice" | "option" | null
 
       function currentRound() {
@@ -3080,6 +3086,64 @@
           clearTimeout(voiceHardStopTimer);
           voiceHardStopTimer = null;
         }
+        if (voiceVadInterval) {
+          clearInterval(voiceVadInterval);
+          voiceVadInterval = null;
+        }
+      }
+
+      function stopVoiceLevelWatch() {
+        if (voiceSourceNode) {
+          try {
+            voiceSourceNode.disconnect();
+          } catch (e) {}
+          voiceSourceNode = null;
+        }
+        voiceAnalyser = null;
+        if (voiceAudioCtx) {
+          try {
+            voiceAudioCtx.close();
+          } catch (e) {}
+          voiceAudioCtx = null;
+        }
+      }
+
+      function startVoiceLevelWatch() {
+        var AC = window.AudioContext || window.webkitAudioContext;
+        if (!micStream || !AC) return;
+        stopVoiceLevelWatch();
+        try {
+          voiceAudioCtx = new AC();
+          voiceAnalyser = voiceAudioCtx.createAnalyser();
+          voiceAnalyser.fftSize = 512;
+          voiceSourceNode = voiceAudioCtx.createMediaStreamSource(micStream);
+          voiceSourceNode.connect(voiceAnalyser);
+          var data = new Uint8Array(voiceAnalyser.fftSize);
+          var rmsThreshold = 0.012;
+          voiceLastLoudAt = Date.now();
+          voiceVadInterval = setInterval(function () {
+            if (!voiceListening || !voiceAnalyser) return;
+            voiceAnalyser.getByteTimeDomainData(data);
+            var sum = 0;
+            for (var i = 0; i < data.length; i++) {
+              var v = (data[i] - 128) / 128;
+              sum += v * v;
+            }
+            var rms = Math.sqrt(sum / data.length);
+            var now = Date.now();
+            if (rms > rmsThreshold) {
+              voiceLastLoudAt = now;
+              return;
+            }
+            if (now - voiceLastLoudAt >= VOICE_SILENCE_CLOSE_MS) {
+              var text = (voiceAccumulated || voiceLastInterim || "").trim();
+              stopVoiceInput(false);
+              submitVoiceResult(text);
+            }
+          }, 120);
+        } catch (e) {
+          stopVoiceLevelWatch();
+        }
       }
 
       function ensureMicConnected() {
@@ -3171,6 +3235,7 @@
           voiceRec = null;
         }
         clearVoiceTimers();
+        stopVoiceLevelWatch();
         releaseMicStream();
         closeVoiceSheet();
       }
@@ -3241,6 +3306,7 @@
             return ensureMicConnected();
           })
           .then(function () {
+            startVoiceLevelWatch();
             var SR = window.SpeechRecognition || window.webkitSpeechRecognition;
             if (!SR) throw new Error("speech-engine-unavailable");
 
@@ -3284,17 +3350,17 @@
                 voiceAccumulated = (voiceAccumulated + " " + finalChunk).trim();
               }
               voiceLastInterim = interimChunk.trim();
-              armVoiceSilenceTimeout(1500);
+              armVoiceSilenceTimeout(VOICE_SILENCE_CLOSE_MS);
             };
 
             rec.onspeechend = function () {
-              armVoiceSilenceTimeout(1500);
+              armVoiceSilenceTimeout(VOICE_SILENCE_CLOSE_MS);
             };
 
             rec.onerror = function (event) {
               if (!voiceListening) return;
               if (event && (event.error === "aborted" || event.error === "no-speech")) {
-                armVoiceSilenceTimeout(1500);
+                armVoiceSilenceTimeout(VOICE_SILENCE_CLOSE_MS);
                 return;
               }
               showVoiceDiag("Riconoscimento vocale non disponibile, uso modalità demo");
