@@ -3294,7 +3294,7 @@
             rec.onerror = function (event) {
               if (!voiceListening) return;
               if (event && (event.error === "aborted" || event.error === "no-speech")) {
-                armVoiceSilenceTimeout(500);
+                armVoiceSilenceTimeout(1500);
                 return;
               }
               showVoiceDiag("Riconoscimento vocale non disponibile, uso modalità demo");
@@ -3304,18 +3304,7 @@
             rec.onend = function () {
               if (!voiceListening || voiceUserAbort) return;
               var text = (voiceAccumulated || voiceLastInterim || "").trim();
-              if (text) {
-                finishOnce(text);
-                return;
-              }
-              if (voiceRestartCount < 1) {
-                voiceRestartCount += 1;
-                try {
-                  rec.start();
-                  return;
-                } catch (e) {}
-              }
-              finishOnce("");
+              finishOnce(text);
             };
 
             voiceHardStopTimer = setTimeout(function () {
