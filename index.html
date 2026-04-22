@@ -2182,7 +2182,7 @@
           <div class="voice-bars" aria-hidden="true">
             <span></span><span></span><span></span><span></span><span></span>
           </div>
-          <p class="voice-sheet-sub" id="voiceSheetSub">Si chiude automaticamente quando smetti di parlare; il risultato appare nella chat</p>
+          <p class="voice-sheet-sub" id="voiceSheetSub">语音输入中</p>
         </div>
       </div>
     </div>
@@ -3144,13 +3144,7 @@
         if (phone) phone.classList.add("phone--voice");
         if (micBtn) micBtn.classList.add("mic-btn--listening");
         var sub = document.getElementById("voiceSheetSub");
-        if (sub) {
-          if (phone.classList.contains("phone--step-3") || phone.classList.contains("phone--step-2")) {
-            sub.textContent = "Si chiude automaticamente dopo una pausa; il testo appare nella chat corrente";
-          } else {
-            sub.textContent = "Si chiude automaticamente dopo una pausa; il contenuto verra riportato nella chat del secondo step";
-          }
-        }
+        if (sub) sub.textContent = "语音输入中";
       }
 
       function submitVoiceResult(text) {
@@ -3200,7 +3194,7 @@
         voiceAccumulated = "";
         voiceLastInterim = "";
         clearVoiceTimers();
-        showVoiceDiag("In ascolto... parla pure");
+        showVoiceDiag("语音输入中");
 
         runVoicePreflight()
           .then(function () {
@@ -3226,7 +3220,7 @@
             }
 
             rec.onstart = function () {
-              showVoiceDiag("Microfono attivo, termina automaticamente quando fai una pausa");
+              showVoiceDiag("语音输入中");
             };
 
             rec.onspeechstart = function () {
