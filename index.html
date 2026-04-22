@@ -2949,7 +2949,9 @@
       var voiceSourceNode = null;
       var voiceVadInterval = null;
       var voiceLastLoudAt = 0;
+      var voiceStartedAt = 0;
       var VOICE_SILENCE_CLOSE_MS = 1500;
+      var VOICE_MIN_CAPTURE_MS = 2500;
       var roundInputMode = { 1: null, 2: null, 3: null }; // "voice" | "option" | null
 
       function currentRound() {
@@ -3119,7 +3121,7 @@
           voiceSourceNode = voiceAudioCtx.createMediaStreamSource(micStream);
           voiceSourceNode.connect(voiceAnalyser);
           var data = new Uint8Array(voiceAnalyser.fftSize);
-          var rmsThreshold = 0.012;
+          var rmsThreshold = 0.0075;
           voiceLastLoudAt = Date.now();
           voiceVadInterval = setInterval(function () {
             if (!voiceListening || !voiceAnalyser) return;
@@ -3135,6 +3137,7 @@
               voiceLastLoudAt = now;
               return;
             }
+            if (now - voiceStartedAt < VOICE_MIN_CAPTURE_MS) return;
             if (now - voiceLastLoudAt >= VOICE_SILENCE_CLOSE_MS) {
               var text = (voiceAccumulated || voiceLastInterim || "").trim();
               stopVoiceInput(false);
@@ -3298,6 +3301,8 @@
         voiceGotSpeech = false;
         voiceAccumulated = "";
         voiceLastInterim = "";
+        voiceStartedAt = Date.now();
+        voiceLastLoudAt = voiceStartedAt;
         clearVoiceTimers();
         showVoiceDiag("Inserimento vocale in corso");
 
@@ -3331,6 +3336,7 @@
 
             rec.onspeechstart = function () {
               voiceGotSpeech = true;
+              voiceLastLoudAt = Date.now();
             };
 
             rec.onresult = function (event) {
@@ -3350,11 +3356,15 @@
                 voiceAccumulated = (voiceAccumulated + " " + finalChunk).trim();
               }
               voiceLastInterim = interimChunk.trim();
+              if (finalChunk.trim() || interimChunk.trim()) {
+                voiceLastLoudAt = Date.now();
+              }
               armVoiceSilenceTimeout(VOICE_SILENCE_CLOSE_MS);
             };
 
             rec.onspeechend = function () {
-              armVoiceSilenceTimeout(VOICE_SILENCE_CLOSE_MS);
+              var wait = Math.max(VOICE_SILENCE_CLOSE_MS, VOICE_MIN_CAPTURE_MS - (Date.now() - voiceStartedAt));
+              armVoiceSilenceTimeout(wait);
             };
 
             rec.onerror = function (event) {
